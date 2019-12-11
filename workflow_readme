@@ -1,0 +1,10 @@
+#
+# General instructions for producing ASTER DSMs from L1A scenes downloaded from EarthData
+# This will be updated.
+
+1. do EarthData search, place order, receive order notification via email
+2. get Order IDs from emails, put into a list
+3. run do_wget_list.sh on the list of order IDs
+4. make a list of all the scene zips that you get buried in the downloaded dir structure that results from the wget script
+5. Use this scene list as input into do_aster_unzip_v3.sh, which preprocess that data.
+6. Run do_aster_stereo.sh
