@@ -112,13 +112,15 @@ join_by() { local IFS="$1"; shift; echo "$*"; }
 # VARIABLES FOR RUN
 #
 # Launch like this example:
-# pupsh "hostname ~ 'ecotone01'" "do_aster_unzip_v3.sh /att/pubrepo/hma_data/ASTER/L1A_orders/2017/list_scenes_zip /att/pubrepo/hma_data/ASTER/L1A_test batch2017 true"
-# pupsh "hostname ~ 'ecotone10'" "do_aster_unzip_v3.sh /att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/ASTER/L1A_orders/boreal/scenes.zip.list /att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/ASTER/L1A_test batch_sib true"
-# Cmd Line Args
-sceneList=$1        # /path/to/main/zip_list
-to_dir=$2           # probably the L1A dir (full path)
-batch_name=$3       # Creates a list 4 stereo (a main batch list of scenenames); can be subdivided and processed on VMs with do_aster_stereo.sh
-RM_DIR=$4           # Remove existing scene dirs and unzip, redo-ing all processing for this list of zips? 
+# pupsh "hostname ~ 'ecotone01'" "do_aster_unzip_v3.sh /att/pubrepo/hma_data/ASTER/L1A_orders/2017/list_scenes_zip batch2017 /att/pubrepo/hma_data/ASTER/L1A true"
+# pupsh "hostname ~ 'ecotone10'" "do_aster_unzip_v3.sh /att/nobackup/pmontesa/userfs02/ASTER/L1A_orders/boreal/scenes.zip.list batch_sib /att/nobackup/pmontesa/userfs02/ASTER/L1A true"
+
+# required args
+sceneList=$1                            # /path/to/main/zip_list
+batch_name=$2                           # Creates a list 4 stereo (a main batch list of scenenames); can be subdivided and processed on VMs with do_aster_stereo.sh
+
+to_dir=${3:-'$NOBACKUP/data/ASTER/L1A'} # probably the L1A dir (full path)
+RM_DIR=${4:-'false'}                    # Remove existing scene dirs and unzip, redo-ing all processing for this list of zips? 
 
 mkdir -p $to_dir
 
