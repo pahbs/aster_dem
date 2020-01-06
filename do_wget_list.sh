@@ -19,6 +19,12 @@
 
 # List name of the list of order IDs
 list_name=$1
+usr_name=$2
+
+if [ -z "$usr_name" ] ; then
+    echo ; echo "Script call needs a user name. Exiting." ; echo
+    exit 1
+fi
 
 # Get the hostname of your VM in the event that you want to run many instances of this script across VM-specific subsets of the Order IDs list on different VMs
 # You'd probably need to launch the companion script "do_par.sh" to accomplish this
@@ -26,7 +32,7 @@ hostN=`/bin/hostname -s`
 list_name=${list_name}_${hostN}
 
 # The actual wget cmd to download the data
-wget --user=montesano --ask-password -l 1 -r -nc -i $list_name
+wget --user=$usr_name --ask-password -l 1 -r -nc -i $list_name
 
 # Make a scenelist
 #find $PWD -name '*.zip' > scenes.zip.list
