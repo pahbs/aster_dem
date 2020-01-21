@@ -255,9 +255,9 @@ topDir=${12} #/att/pubrepo/hma_data/ASTER
 hostN=`/bin/hostname -s`
 
 # Job tile size for SGM run; tilesize^2 * 300 / 1e9 = RAM needed per thread
-tileSize=5000 #1024
+tileSize=${13:-'1024'}
 
-TEST_DIR_TAIL=${13:-''}
+TEST_DIR_TAIL=${14:-''}
 
 #num_min_old=60
 num_old=5 #days
