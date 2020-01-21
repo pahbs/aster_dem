@@ -5,6 +5,7 @@
 #
 # Example of most recent call:
 # pupsh "hostname ~ 'ecotone01'" "do_aster_stereo.sh list_2017 true true true 3 3 49 2"
+# pupsh "hostname ~ 'wetf101'" "do_aster_stereo.sh batch_colima true true true true 3 3 49 2 30 <path_to_ref_DEM> /att/nobackup/<usr>/data/ASTER"
 
 ################################
 #_____Function Definitions_____
@@ -218,18 +219,31 @@ run_asp() {
 #
 
 # A main list of scenes (that has a sub-lists specific to the set of VMs youll use)
+# If not running across sub-lists that are already named with the VM, then reanme your list like this: <your_list>_<VMname> (eg, batch_colima_wetf101)
 batch=$1
-MAP=$2
-REDO_MAP=$3
-REDO_STEREO=$4
-# Use Semi-Global Matching stereo algorithm?
-SGM=$5
 
-med_filt_sz=$6
-text_smth_sz=$7
+# true or false
+MAP=${2:-'true'}
+# true or false
+REDO_MAP=${3:-'true'}
+# true or false
+REDO_STEREO=${4:-'true'}
+# Use Semi-Global Matching stereo algorithm?
+SGM=${5:-'true'}
+
+# Smallest filter windows for smoothing are the defaults
+med_filt_sz=${6:-'3'}
+text_smth_sz=${7:-'3'}
+
+# Try to find a value that removes pixels adjacent to NoData that may be more likley to be bad. This can be done at two different stages:
+# first stage: stereo
 erode_max_sz=$8
+# second stage: point2dem
 erode_len=$9
-res=${10}	#30 for HMA
+
+# Output resolution of DEM
+res=${10:-'30'}	#30m for HMA
+
 # Input DEM for mapproject and cloud-removal
 #inDEM=/att/pubrepo/hma_data/products/nasadem/hma_nasadem_hgt_merge_hgt_aea.tif
 #inDEM=/att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/ASTGTM2_N40-79E.vrt
@@ -241,19 +255,9 @@ topDir=${12} #/att/pubrepo/hma_data/ASTER
 hostN=`/bin/hostname -s`
 
 # Job tile size for SGM run; tilesize^2 * 300 / 1e9 = RAM needed per thread
-tileSize=1024
+tileSize=5000 #1024
 
-if [[ "$hostN" = *"himat"* ]]; then
-    tileSize=5000   #1500
-fi
-if [[ "$hostN" = *"ecotone"* ]] || [[ "$hostN" = *"ngaproc"* ]]; then
-    tileSize=5000   #2500
-fi 
-if [[ "$hostN" = *"crane"* ]]; then
-    tileSize=5000
-fi
-
-TEST_DIR_TAIL=${13}
+TEST_DIR_TAIL=${13:-''}
 
 #num_min_old=60
 num_old=5 #days

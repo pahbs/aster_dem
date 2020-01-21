@@ -119,10 +119,11 @@ join_by() { local IFS="$1"; shift; echo "$*"; }
 sceneList=$1                            # /path/to/main/zip_list
 batch_name=$2                           # Creates a list 4 stereo (a main batch list of scenenames); can be subdivided and processed on VMs with do_aster_stereo.sh
 
-to_dir=${3:-'$NOBACKUP/data/ASTER/L1A'} # probably the L1A dir (full path)
+to_dir=${3:-'/att/nobackup/pmontesa/data/ASTER/L1A'} # probably the L1A dir (full path)
 RM_DIR=${4:-'false'}                    # Remove existing scene dirs and unzip, redo-ing all processing for this list of zips? 
 
 mkdir -p $to_dir
+mkdir -p $(dirname ${to_dir})/logs
 
 # Get hostname
 hostN=`/bin/hostname -s`
@@ -134,7 +135,7 @@ echo ${sceneList}_${hostN}
 while read -r line; do
 
     path_to_zip=$line
-
+    
     logFile=$(dirname ${to_dir})/logs/aster_unzip_$(basename ${path_to_zip%.}).log
     
     echo "Start: $(date)" | tee $logFile
