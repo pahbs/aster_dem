@@ -5,7 +5,7 @@
 #
 # Example of most recent call:
 # pupsh "hostname ~ 'ecotone01'" "do_aster_stereo.sh list_2017 true true true 3 3 49 2"
-# pupsh "hostname ~ 'wetf101'" "do_aster_stereo.sh batch_colima true true true true 3 3 49 2 30 <path_to_ref_DEM> /att/nobackup/<usr>/data/ASTER"
+# pupsh "hostname ~ 'wetf'" "do_aster_stereo.sh batch_colima true true true true 3 3 49 2 30 <path_to_ref_DEM> /att/nobackup/<usr>/data/ASTER"
 
 ################################
 #_____Function Definitions_____
@@ -39,15 +39,15 @@ run_asp() {
     inDEM=$3
     tileSize=$4
     sceneName=$5
-    now=$6
-    L1Adir=$7
-    logFile=$8
+    ##now=$6
+    L1Adir=$6
+    logFile=$7
 
-    med_filt_sz=${9}
-    text_smth_sz=${10}
-    erode_max_sz=${11}
-    erode_len=${12}
-    res=${13}
+    med_filt_sz=${8}
+    text_smth_sz=${9}
+    erode_max_sz=${10}
+    erode_len=${11}
+    res=${12}
     
     if [ "${med_filt_sz}" = "" ] || [ "${text_smth_sz}" = "" ]  ; then
         # The length of 1 of the strings is zero, so set both to default
@@ -64,7 +64,14 @@ run_asp() {
     ncc_corrKern=21
     subpixKern=21
 
-    ncpu=$(cat /proc/cpuinfo | egrep "core id|physical id" | tr -d "\n" | sed s/physical/\\nphysical/g | grep -v ^$ | sort | uniq | wc -l)
+    # Get # of THREADs (aka siblings aka logical cores) per CORE
+    nthread_core=$(lscpu | awk '/^Thread/ {threads=$NF} END {print threads}')
+    # Get # of COREs per CPU
+    ncore_cpu=$(lscpu | awk '/^Core/ {cores=$NF} END {print cores}')
+    # Get # of CPUs (aka sockets)
+    ncpu=$(lscpu | awk '/^Socket.s.:/ {sockets=$NF} END {print sockets}')
+    # Get # of logical cores
+    nlogical_cores=$((nthread_core * ncore_cpu * ncpu ))
 
     #runDir=corr${corrKern}_subpix${subpixKern}
 	echo " " | tee -a $logFile
@@ -77,7 +84,7 @@ run_asp() {
     #
     # parallel_stereo with SGM
     par_opts="--corr-tile-size $tileSize --job-size-w $tileSize --job-size-h $tileSize"
-    par_opts+=" --processes 16 --threads-multiprocess 1 --threads-singleprocess $ncpu"
+    par_opts+=" --processes $nlogical_cores --threads-multiprocess 1 --threads-singleprocess $ncpu"
 
     sgm_opts="-t aster --xcorr-threshold -1 --corr-kernel $sgm_corrKern $sgm_corrKern"
     sgm_opts+=" --erode-max-size $erode_max_sz --cost-mode 4 --subpixel-mode 0 --median-filter-size $med_filt_sz --texture-smooth-size $text_smth_sz --texture-smooth-scale 0.13"
@@ -181,9 +188,11 @@ run_asp() {
     fi
 
     if gdalinfo ${outPrefix}-PC.tif | grep -q VRT ; then
+
         echo "Convert PC.tif from virtual to real" | tee -a $logFile
         eval time gdal_translate $gdal_opts ${outPrefix}-PC.tif ${outPrefix}-PC_full.tif
         mv ${outPrefix}-PC_full.tif ${outPrefix}-PC.tif
+
         echo "Removing intermediate parallel_stereo dirs" | tee -a $logFile
         rm -rf ${outPrefix}*/
         rm -f ${outPrefix}-log-stereo_parse*.txt
@@ -244,7 +253,7 @@ erode_len=$9
 # Output resolution of DEM
 res=${10:-'30'}	#30m for HMA
 
-# Input DEM for mapproject and cloud-removal
+# Input reference DEM for mapproject and cloud-removal
 #inDEM=/att/pubrepo/hma_data/products/nasadem/hma_nasadem_hgt_merge_hgt_aea.tif
 #inDEM=/att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/ASTGTM2_N40-79E.vrt
 #inDEM=/att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/siberia/SIB_ASTGTM2_pct100.tif
@@ -265,7 +274,7 @@ num_old=5 #days
 out_dir=$topDir/L1A${TEST_DIR_TAIL}
 mkdir -p $out_dir
 
-now="$(date +'%Y%m%d%T')"
+##now="$(date +'%Y%m%d%T')"
 
 # Process the AST_L1A dir indicated with the sceneName
 
@@ -291,7 +300,7 @@ while read -r scene; do
 
 	if [ -d "${out_dir}/${sceneName}" ]; then 
 		
-        if [ "$MAP" = true ] && [ "$REDO_MAP" = true ] ; then
+        if [[ "$MAP" = true ]] && [[ "$REDO_MAP" = true ]] ; then
             # Delete if files older than (indicated with '+') num_old; use '-' to indicate 'younger than'
             find ${out_dir}/${sceneName}/in-Band*proj.tif -mtime +${num_old} -exec rm {} \;
         fi
@@ -302,18 +311,18 @@ while read -r scene; do
             find ${out_dir}/${sceneName}/outASP/out-PC.tif -mtime +${num_old} -exec rm {} \;
             
             if [ ! -e "${out_dir}/${sceneName}/outASP/out-PC.tif" ] ; then
-                echo; echo "PC and DEM deleted b/c it was older than ${num_old} days . Re-do stereo"; echo | tee -a $logFile
+                echo; echo "PC and DEM deleted b/c it was older than ${num_old} days . Re-do stereo" ; echo | tee -a $logFile
                 rm -rfv ${out_dir}/${sceneName}/outASP/out-DEM*.tif
             else
-                echo; echo "PC file is newer than ${num_old} days. Keep it."; echo | tee -a $logFile
+                echo ; echo "PC file is newer than ${num_old} days. Keep it."; echo | tee -a $logFile
             fi
            
         fi
 
-        #Function call
-		echo "Running ASP routines..." | tee -a $sceneLog
-        # Args: sgm t/f, DEM for mapprj, tile sz for SGM, sceneName, time, out_dir, log, a stereo param, a stereo param, a stereo param, a p2d param
-    	run_asp $MAP $SGM $inDEM $tileSize $sceneName $now $out_dir $sceneLog $med_filt_sz $text_smth_sz $erode_max_sz $erode_len $res
+		echo ; echo "Running ASP routines..." | tee -a $sceneLog
+        
+        # Look above for function arg descriptions
+    	run_asp $MAP $SGM $inDEM $tileSize $sceneName $out_dir $sceneLog $med_filt_sz $text_smth_sz $erode_max_sz $erode_len $res
 	
     else
 		echo "Delete tmp ASP files..."
