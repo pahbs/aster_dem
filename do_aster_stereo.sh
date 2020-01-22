@@ -280,6 +280,7 @@ mkdir -p $out_dir
 
 cd $topDir
 
+mkdir -p ${topDir}/logs
 batchLogStem=${topDir}/logs/${batch}_${hostN}.log
 
 cnt_tmpfile=/tmp/$$.tmp
