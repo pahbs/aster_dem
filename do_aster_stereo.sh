@@ -19,7 +19,7 @@ run_mapprj() {
     logFile=$3
 
     cmd_list=''
-    echo "Running mapproject ..." | tee -a $logFile
+    echo "Running mapproject ..." 
     for type in N B ; do
         cmd=''
         cmd+="mapproject --threads=5 $inDEM $sceneName/in-Band3${type}.tif $sceneName/in-Band3${type}.xml $sceneName/in-Band3${type}_proj.tif ; "
@@ -29,7 +29,7 @@ run_mapprj() {
 
     eval parallel --delay 2 -verbose -j 2 ::: $cmd_list
 
-    echo "Finished mapprojecting" | tee -a $logFile
+    echo "Finished mapprojecting" 
 }
 
 run_asp() {
@@ -57,7 +57,7 @@ run_asp() {
     if [ "${erode_max_sz}" = "" ] ; then
         erode_max_sz=0
     fi
-    echo; echo "L1A dir: $L1Adir"; echo  | tee -a $logFile
+    echo; echo "L1A dir: $L1Adir"; echo  
     cd $L1Adir
 
     sgm_corrKern=7
@@ -74,9 +74,9 @@ run_asp() {
     nlogical_cores=$((nthread_core * ncore_cpu * ncpu ))
 
     #runDir=corr${corrKern}_subpix${subpixKern}
-	echo " " | tee -a $logFile
-    echo "Working on: $sceneName " | tee -a $logFile
-    echo "Input coarse DEM: ${inDEM}" | tee -a $logFile
+	echo
+    echo "Working on: $sceneName "
+    echo "Input coarse DEM: ${inDEM}" 
 
     outPrefix=$L1Adir/$sceneName/outASP/out
 
@@ -97,39 +97,41 @@ run_asp() {
         stereo_args="$sceneName/in-Band3N.tif $sceneName/in-Band3B.tif $sceneName/in-Band3N.xml $sceneName/in-Band3B.xml $outPrefix"
     fi
 
-    echo "Check for ASP input" | tee -a $logFile
+    echo "Check for ASP input" 
     inPre=$sceneName/in-Band3
 
     if gdalinfo ${inPre}N.tif >> /dev/null && gdalinfo ${inPre}B.tif >> /dev/null && [ -f ${inPre}N.xml ] && [ -f ${inPre}B.xml ]; then
-        echo "[1] ASP input exists." | tee -a $logFile
+        echo "[1] ASP input exists." 
     else
-		echo "[1] Running aster2asp on $sceneName ..." | tee -a $logFile
+		echo "[1] Running aster2asp on $sceneName ..."
 		find $sceneName -type f -name in-Band3* -exec rm -rf {} \;
 
         cmd="aster2asp --threads=15 ${sceneName} -o ${sceneName}/in"
-        echo $cmd | tee -a $logFile
+        echo $cmd 
         eval $cmd
     fi
 
     if [ "$MAP" = true ] ; then
         if [ ! -f ${inPre}N_proj.tif ] || [ ! -f ${inPre}B_proj.tif ] ; then
 
-            echo "[2] Running ASP Mapproject..." | tee -a $logfile
+            echo "[2] Running ASP Mapproject..."
             find $sceneName -type f -name in-Band3*_proj.tif -exec rm -rf {} \;
 
-            cmd="run_mapprj $inDEM $sceneName $logFile"
+            #cmd="run_mapprj $inDEM $sceneName $logFile"
+            cmd="run_mapprj $inDEM $sceneName"
             echo $cmd
             eval $cmd
 
         fi
 
         if gdalinfo ${inPre}N_proj.tif >> /dev/null && gdalinfo ${inPre}B_proj.tif >> /dev/null ; then
-            echo "[2] ASP Mapproject already complete." | tee -a $logFile
+            echo "[2] ASP Mapproject already complete."
         else
-            echo "[2] ASP Mapproject re-do..." | tee -a $logFile
+            echo "[2] ASP Mapproject re-do..."
             find $sceneName -type f -name in-Band3*_proj.tif -exec rm -rf {} \;
 
-            cmd="run_mapprj $inDEM $sceneName $logFile"
+            #cmd="run_mapprj $inDEM $sceneName $logFile"
+            cmd="run_mapprj $inDEM $sceneName"
             echo $cmd
             eval $cmd
         fi
@@ -138,82 +140,82 @@ run_asp() {
     echo; echo "outPrefix PC: $outPrefix-PC.tif"; echo
 
     if [ ! -f $outPrefix-PC.tif ]; then
-        echo "[3] Run ASP stereo with the map-projected images..." | tee -a $logFile
-        echo "Determine which stereo algorithm to run ..." | tee -a $logFile
-        echo "Tile size = ${tileSize}" | tee -a $logFile
+        echo "[3] Run ASP stereo with the map-projected images..."
+        echo "Determine which stereo algorithm to run ..."
+        echo "Tile size = ${tileSize}"
 
         if [ "$SGM" = true ] ; then
 
-            echo "Running SGM stereo algorithm" | tee -a $logFile
+            echo "Running SGM stereo algorithm"
 
             find $sceneName/outASP -type f -name out* -exec rm -rf {} \;
 
             cmd="parallel_stereo --stereo-algorithm 1 $par_opts $sgm_opts $stereo_args"
             #cmd="stereo --stereo-algorithm 1 --corr-tile-size 10000 --threads $ncpu $sgm_opts $stereo_args"
-            echo $cmd | tee -a $logFile
+            echo $cmd
             eval $cmd
-            echo "Finished stereo from SGM mode." | tee -a $logFile
+            echo "Finished stereo from SGM mode."
 
             if [ ! -f $outPrefix-PC.tif ]; then
 
-                echo "Running MGM stereo algorithm(SGM failed to create a PC.tif) ..." | tee -a $logFile
+                echo "Running MGM stereo algorithm(SGM failed to create a PC.tif) ..."
 
                 find $sceneName/outASP -type f -name out* -exec rm -rf {} \;
                 cmd="parallel_stereo --stereo-algorithm 2 $par_opts $sgm_opts $stereo_args"
                 #cmd="stereo --stereo-algorithm 2 --corr-tile-size 10000 --threads $ncpu $sgm_opts $stereo_args"
-                echo $cmd | tee -a $logFile
+                echo $cmd
                 eval $cmd
-                echo "Finished stereo from MGM mode." | tee -a $logFile
+                echo "Finished stereo from MGM mode."
             fi
 
             if [ -f $outPrefix-PC.tif ]; then
-					echo "Stereo successful from SGM or MGM mode." | tee -a $logFile
+					echo "Stereo successful from SGM or MGM mode."
 				else
-					echo "Stereo NOT successful from SGM or MGM mode." | tee -a $logFile
+					echo "Stereo NOT successful from SGM or MGM mode." 
             fi
         fi
 
         # If SGM is false or fails, this is the stereo that is attempted
         if [ "$SGM" = false ] || [ ! -f $outPrefix-PC.tif ] ; then
 
-            echo "Running stereo with local search window algorithm ..." | tee -a $logFile
+            echo "Running stereo with local search window algorithm ..."
             #cmd="parallel_stereo $par_opts $ncc_opts $stereo_args"
             cmd="stereo --threads $ncpu $ncc_opts $stereo_args"
-            echo $cmd | tee -a $logFile
+            echo $cmd
             eval $cmd
-            echo "Finished stereo." | tee -a $logFile
+            echo "Finished stereo."
         fi
     else
-        echo "[3] Stereo complete. PC file exists." | tee -a $logFile
+        echo "[3] Stereo complete. PC file exists."
     fi
 
     if gdalinfo ${outPrefix}-PC.tif | grep -q VRT ; then
 
-        echo "Convert PC.tif from virtual to real" | tee -a $logFile
+        echo "Convert PC.tif from virtual to real"
         eval time gdal_translate $gdal_opts ${outPrefix}-PC.tif ${outPrefix}-PC_full.tif
         mv ${outPrefix}-PC_full.tif ${outPrefix}-PC.tif
 
-        echo "Removing intermediate parallel_stereo dirs" | tee -a $logFile
+        echo "Removing intermediate parallel_stereo dirs"
         rm -rf ${outPrefix}*/
         rm -f ${outPrefix}-log-stereo_parse*.txt
     fi
 
     if [ -f "${outPrefix}-PC.tif" ] ; then
     
-        echo "[4] Ready to run do_aster_p2d.sh" | tee -a $logFile
+        echo "[4] Ready to run do_aster_p2d.sh"
         cmd=""
         cmd="do_aster_p2d.sh ${sceneName} ${L1Adir} ${erode_len} ${res} ${inDEM}"
         echo $cmd
-        eval $cmd | tee -a $logFile
+        eval $cmd
 
         if [ -e $outPrefix-DEM_cr.tif ] ; then  
-            echo "[END] Finished processing ${sceneName}." | tee -a $logFile
+            echo "[END] Finished processing ${sceneName}."
         else
-            echo "[END] Finished processing ${sceneName}. DEM not created." | tee -a $logFile
+            echo "[END] Finished processing ${sceneName}. DEM not created."
         fi
     fi
     if [ ! -e $outPrefix-PC.tif ] ; then
-        echo "[END] Finished processing ${sceneName}. No PC.tif file. DEM not created." | tee -a $logFile
+        echo "[END] Finished processing ${sceneName}. No PC.tif file. DEM not created."
     fi
 
     for i in F L R RD D GoodPixelMap lMask rMask lMask_sub rMask_sub L_sub R_sub D_sub ; do
@@ -224,7 +226,7 @@ run_asp() {
 }
 ##############################################
 #
-# Hard coded stuff
+# Main portion of script
 #
 
 # A main list of scenes (that has a sub-lists specific to the set of VMs youll use)
@@ -281,7 +283,7 @@ mkdir -p $out_dir
 cd $topDir
 
 mkdir -p ${topDir}/logs
-batchLogStem=${topDir}/logs/${batch}_${hostN}.log
+batchLogStem=${topDir}/logs/${batch}_${hostN}
 
 cnt_tmpfile=/tmp/$$.tmp
 echo 0 > $cnt_tmpfile
@@ -295,7 +297,9 @@ while read -r scene; do
     echo $scene
     sceneName=$(basename $scene)
 
-    sceneLog=${batchLogStem}_${sceneName}
+    sceneLog=${batchLogStem}_${sceneName}.log
+    echo ; echo "Scene log file" ; echo $sceneLog ; echo
+
     echo "Scene name: ${sceneName}" | tee -a $sceneLog
     echo "START: $(date)" | tee -a $sceneLog 
 
@@ -312,10 +316,10 @@ while read -r scene; do
             find ${out_dir}/${sceneName}/outASP/out-PC.tif -mtime +${num_old} -exec rm {} \;
             
             if [ ! -e "${out_dir}/${sceneName}/outASP/out-PC.tif" ] ; then
-                echo; echo "PC and DEM deleted b/c it was older than ${num_old} days . Re-do stereo" ; echo | tee -a $logFile
+                echo; echo "PC and DEM deleted b/c it was older than ${num_old} days . Re-do stereo" ; echo | tee -a $sceneLog
                 rm -rfv ${out_dir}/${sceneName}/outASP/out-DEM*.tif
             else
-                echo ; echo "PC file is newer than ${num_old} days. Keep it."; echo | tee -a $logFile
+                echo ; echo "PC file is newer than ${num_old} days. Keep it."; echo | tee -a $sceneLog
             fi
            
         fi
@@ -323,7 +327,7 @@ while read -r scene; do
 		echo ; echo "Running ASP routines..." | tee -a $sceneLog
         
         # Look above for function arg descriptions
-    	run_asp $MAP $SGM $inDEM $tileSize $sceneName $out_dir $sceneLog $med_filt_sz $text_smth_sz $erode_max_sz $erode_len $res
+    	run_asp $MAP $SGM $inDEM $tileSize $sceneName $out_dir $sceneLog $med_filt_sz $text_smth_sz $erode_max_sz $erode_len $res | tee -a $sceneLog
 	
     else
 		echo "Delete tmp ASP files..."
