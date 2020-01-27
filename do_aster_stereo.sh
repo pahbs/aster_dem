@@ -4,25 +4,38 @@
 #   (eg; AST_L1A_00306232003135434_20170125151451_24922.zip)
 #
 # Example of most recent call:
-# pupsh "hostname ~ 'ecotone01'" "do_aster_stereo.sh list_2017 true true true 3 3 49 2"
-# pupsh "hostname ~ 'wetf'" "do_aster_stereo.sh batch_colima true true true true 3 3 49 2 30 <path_to_ref_DEM> /att/nobackup/<usr>/data/ASTER"
+# pupsh "hostname ~ 'ecotone|crane'" "do_aster_stereo.sh list_do_aster_stereo_batch_colima 30 /att/nobackup/pmontesa/userfs02/data /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_N19W104_DEM.tif hardlink true true true true 3 3 49 0"
+#
+# Get a refdem from TDX90m
+# cd /att/nobackup/pmontesa/userfs02/data/tandemx
+# gdalbuildvrt /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.vrt $PWD/TDM90/TDM1_DEM__30_N6[3456]W1[45]*/DEM/*DEM.tif
+# gdal_translate /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.vrt /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.tif
+
+# Reference DEMs
+# /att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/ASTGTM2_N40-79.vrt
+# /att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/data/tandemx/TDM90/mos/TDM1_DEM_90m_DEM.vrt
+# /att/pubrepo/hma_data/products/nasadem/hma_nasadem_hgt_merge_hgt_aea.tif
 
 ################################
 #_____Function Definitions_____
 ################################
 
-
 run_mapprj() {
 
-    inDEM=$1
-    sceneName=$2
-    logFile=$3
+    # Note:
+    # The purporse of mapprojecting input stereopairs is to speed up the alignment at the 'preprocessing' stage of stereo.
+    # Make sure you have a reference DEM in a projection that is appropriate for the area of the input data.
+    # Otherwise, the mapprojected files will be much larger that in original data, and significantly lengthen the alignment.
+
+    inDEM=${1}
+    sceneName=${2}
+    threads_per=${3}
 
     cmd_list=''
     echo "Running mapproject ..." 
     for type in N B ; do
         cmd=''
-        cmd+="mapproject --threads=5 $inDEM $sceneName/in-Band3${type}.tif $sceneName/in-Band3${type}.xml $sceneName/in-Band3${type}_proj.tif ; "
+        cmd+="mapproject --threads=$threads_per $inDEM $sceneName/in-Band3${type}.tif $sceneName/in-Band3${type}.xml $sceneName/in-Band3${type}_proj.tif ; "
         echo $cmd
         cmd_list+=\ \'$cmd\'
     done
@@ -43,20 +56,13 @@ run_asp() {
     L1Adir=$6
     logFile=$7
 
-    med_filt_sz=${8}
-    text_smth_sz=${9}
-    erode_max_sz=${10}
-    erode_len=${11}
+    med_filt_sz=${8:-'0'}
+    text_smth_sz=${9:-'0'}
+    erode_max_sz=${10:-'0'}
+    erode_len=${11:-'0'}
     res=${12}
-    
-    if [ "${med_filt_sz}" = "" ] || [ "${text_smth_sz}" = "" ]  ; then
-        # The length of 1 of the strings is zero, so set both to default
-        med_filt_sz=0
-        text_smth_sz=0
-    fi
-    if [ "${erode_max_sz}" = "" ] ; then
-        erode_max_sz=0
-    fi
+    LINK=${13}
+
     echo; echo "L1A dir: $L1Adir"; echo  
     cd $L1Adir
 
@@ -84,63 +90,67 @@ run_asp() {
     #
     # parallel_stereo with SGM
     par_opts="--corr-tile-size $tileSize --job-size-w $tileSize --job-size-h $tileSize"
-    par_opts+=" --processes $nlogical_cores --threads-multiprocess 1 --threads-singleprocess $ncpu"
+    par_opts+=" --processes $nlogical_cores --threads-multiprocess 1 --threads-singleprocess $nlogical_cores"
 
     sgm_opts="-t aster --xcorr-threshold -1 --corr-kernel $sgm_corrKern $sgm_corrKern"
     sgm_opts+=" --erode-max-size $erode_max_sz --cost-mode 4 --subpixel-mode 0 --median-filter-size $med_filt_sz --texture-smooth-size $text_smth_sz --texture-smooth-scale 0.13"
     
     ncc_opts="-t aster --cost-mode 2 --corr-kernel $ncc_corrKern $ncc_corrKern --subpixel-mode 2 --subpixel-kernel $subpixKern $subpixKern"
     
-    if [ "$MAP" = true ] ; then
-        stereo_args="$sceneName/in-Band3N_proj.tif $sceneName/in-Band3B_proj.tif $sceneName/in-Band3N.xml $sceneName/in-Band3B.xml $outPrefix $inDEM"
-    else
-        stereo_args="$sceneName/in-Band3N.tif $sceneName/in-Band3B.tif $sceneName/in-Band3N.xml $sceneName/in-Band3B.xml $outPrefix"
-    fi
-
-    echo "Check for ASP input" 
+    in_nadir=$sceneName/in-Band3N.tif
+    in_back=$sceneName/in-Band3B.tif
+    
+    echo ; echo "Check for stereopair input" 
     inPre=$sceneName/in-Band3
 
     if gdalinfo ${inPre}N.tif >> /dev/null && gdalinfo ${inPre}B.tif >> /dev/null && [ -f ${inPre}N.xml ] && [ -f ${inPre}B.xml ]; then
-        echo "[1] ASP input exists." 
+        echo ; echo "[1] Stereopair input exists." 
     else
 		echo "[1] Running aster2asp on $sceneName ..."
-		find $sceneName -type f -name in-Band3* -exec rm -rf {} \;
+		echo ; find $sceneName -type f -name in-Band3* -exec rm -rf {} \;
 
-        cmd="aster2asp --threads=15 ${sceneName} -o ${sceneName}/in"
-        echo $cmd 
-        eval $cmd
+        cmd="aster2asp --threads=$nlogical_cores ${sceneName} -o ${sceneName}/in"
+        echo $cmd ; eval $cmd
     fi
+
+    cmd_maprj="run_mapprj $inDEM $sceneName $(($nlogical_cores / 2))"
 
     if [ "$MAP" = true ] ; then
         if [ ! -f ${inPre}N_proj.tif ] || [ ! -f ${inPre}B_proj.tif ] ; then
 
-            echo "[2] Running ASP Mapproject..."
+            echo ; echo "[2] Running mapproject..."
             find $sceneName -type f -name in-Band3*_proj.tif -exec rm -rf {} \;
-
-            #cmd="run_mapprj $inDEM $sceneName $logFile"
-            cmd="run_mapprj $inDEM $sceneName"
-            echo $cmd
-            eval $cmd
-
+            echo $cmd_maprj ; eval $cmd_maprj
         fi
-
         if gdalinfo ${inPre}N_proj.tif >> /dev/null && gdalinfo ${inPre}B_proj.tif >> /dev/null ; then
-            echo "[2] ASP Mapproject already complete."
+            echo ; echo "[2] Mapproject already complete."
         else
-            echo "[2] ASP Mapproject re-do..."
+            echo ; echo "[2] Mapproject re-do..."
             find $sceneName -type f -name in-Band3*_proj.tif -exec rm -rf {} \;
-
-            #cmd="run_mapprj $inDEM $sceneName $logFile"
-            cmd="run_mapprj $inDEM $sceneName"
-            echo $cmd
-            eval $cmd
+            echo $cmd_maprj ; eval $cmd_maprj
         fi
+    fi
+
+    if [ "$MAP" = true ] ; then
+        echo ; echo "Using mapprojected input stereopairs." 
+        in_nadir=${in_nadir%.*}_proj.tif
+        in_back=${in_back%.*}_proj.tif
+    fi
+
+    echo ; echo "Size of input nadir image: $(gdalinfo $in_nadir | grep 'Size')" 
+    
+    # Set the args for stereo after determining if stereopairs will be mapprojected
+    stereo_args="$in_nadir $in_back $sceneName/in-Band3N.xml $sceneName/in-Band3B.xml $outPrefix"
+
+    if [ "$MAP" = true ] ; then
+        stereo_args+=" $inDEM"
     fi
 
     echo; echo "outPrefix PC: $outPrefix-PC.tif"; echo
 
     if [ ! -f $outPrefix-PC.tif ]; then
-        echo "[3] Run ASP stereo with the map-projected images..."
+
+        echo "[3] Run AMES Stereo Pipeline stereogrammetry..."
         echo "Determine which stereo algorithm to run ..."
         echo "Tile size = ${tileSize}"
 
@@ -152,8 +162,7 @@ run_asp() {
 
             cmd="parallel_stereo --stereo-algorithm 1 $par_opts $sgm_opts $stereo_args"
             #cmd="stereo --stereo-algorithm 1 --corr-tile-size 10000 --threads $ncpu $sgm_opts $stereo_args"
-            echo $cmd
-            eval $cmd
+            echo ; echo $cmd ; eval $cmd
             echo "Finished stereo from SGM mode."
 
             if [ ! -f $outPrefix-PC.tif ]; then
@@ -163,15 +172,14 @@ run_asp() {
                 find $sceneName/outASP -type f -name out* -exec rm -rf {} \;
                 cmd="parallel_stereo --stereo-algorithm 2 $par_opts $sgm_opts $stereo_args"
                 #cmd="stereo --stereo-algorithm 2 --corr-tile-size 10000 --threads $ncpu $sgm_opts $stereo_args"
-                echo $cmd
-                eval $cmd
+                echo ; echo $cmd ; eval $cmd
                 echo "Finished stereo from MGM mode."
             fi
 
             if [ -f $outPrefix-PC.tif ]; then
-					echo "Stereo successful from SGM or MGM mode."
-				else
-					echo "Stereo NOT successful from SGM or MGM mode." 
+			    echo "Stereo successful from SGM or MGM mode."
+            else
+			    echo "Stereo NOT successful from SGM or MGM mode." 
             fi
         fi
 
@@ -181,8 +189,7 @@ run_asp() {
             echo "Running stereo with local search window algorithm ..."
             #cmd="parallel_stereo $par_opts $ncc_opts $stereo_args"
             cmd="stereo --threads $ncpu $ncc_opts $stereo_args"
-            echo $cmd
-            eval $cmd
+            echo ; echo $cmd ; eval $cmd
             echo "Finished stereo."
         fi
     else
@@ -203,10 +210,8 @@ run_asp() {
     if [ -f "${outPrefix}-PC.tif" ] ; then
     
         echo "[4] Ready to run do_aster_p2d.sh"
-        cmd=""
-        cmd="do_aster_p2d.sh ${sceneName} ${L1Adir} ${erode_len} ${res} ${inDEM}"
-        echo $cmd
-        eval $cmd
+        cmd="do_aster_p2d.sh ${sceneName} ${L1Adir} ${erode_len} ${res} ${inDEM} ${LINK}"
+        echo ; echo $cmd ; eval $cmd
 
         if [ -e $outPrefix-DEM_cr.tif ] ; then  
             echo "[END] Finished processing ${sceneName}."
@@ -228,62 +233,69 @@ run_asp() {
 #
 # Main portion of script
 #
-
 # A main list of scenes (that has a sub-lists specific to the set of VMs youll use)
-# If not running across sub-lists that are already named with the VM, then reanme your list like this: <your_list>_<VMname> (eg, batch_colima_wetf101)
+# If not running across sub-lists that are already named with the VM, then rename your list like this:
+# <your_list>_<VMname> (eg, batch_colima_wetf101)
+
+t_start=$(date +%s)
+
 batch=$1
 
-# true or false
-MAP=${2:-'true'}
-# true or false
-REDO_MAP=${3:-'true'}
-# true or false
-REDO_STEREO=${4:-'true'}
+# Output resolution of DEM
+res_dem=${2:-'30'}
+
+# Indicate main dir into which ASTER subdir will be placed
+dir_ASTER=${3}/ASTER
+
+# Input reference DEM with no holes for mapproject and cloud-removal
+inDEM=${4}
+
+# Use 'hardlink' to copy output DEMs to common dir (gets passed to do_aster_p2d.sh)
+LINK=${5:-'symlink'}
+
+# Do mapproject: true or false
+MAP=${6:-'true'}
+
+# Re-do mapproject: true or false
+REDO_MAP=${7:-'true'}
+
+# Re-do stereo: true or false
+REDO_STEREO=${8:-'true'}
+
 # Use Semi-Global Matching stereo algorithm?
-SGM=${5:-'true'}
+SGM=${9:-'true'}
 
 # Smallest filter windows for smoothing are the defaults
-med_filt_sz=${6:-'3'}
-text_smth_sz=${7:-'3'}
+med_filt_sz=${10:-'3'}
+text_smth_sz=${11:-'3'}
 
-# Try to find a value that removes pixels adjacent to NoData that may be more likley to be bad. This can be done at two different stages:
-# first stage: stereo
-erode_max_sz=$8
-# second stage: point2dem
-erode_len=$9
+# Remove isolated groups of pixels of this size or smaller during stereo_fltr
+erode_max_sz=${12:-'0'}
 
-# Output resolution of DEM
-res=${10:-'30'}	#30m for HMA
-
-# Input reference DEM for mapproject and cloud-removal
-#inDEM=/att/pubrepo/hma_data/products/nasadem/hma_nasadem_hgt_merge_hgt_aea.tif
-#inDEM=/att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/ASTGTM2_N40-79E.vrt
-#inDEM=/att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/siberia/SIB_ASTGTM2_pct100.tif
-inDEM=${11}
-
-topDir=${12} #/att/pubrepo/hma_data/ASTER
-
-hostN=`/bin/hostname -s`
+# Erode point cloud at boundaries with nodata by this many pixels
+erode_len=${13:-'0'}
 
 # Job tile size for SGM run; tilesize^2 * 300 / 1e9 = RAM needed per thread
-tileSize=${13:-'1024'}
+tileSize=${14:-'1024'}
 
-TEST_DIR_TAIL=${14:-''}
+# For testing
+TEST_DIR_TAIL=${15:-''}
 
 #num_min_old=60
-num_old=5 #days
-
-out_dir=$topDir/L1A${TEST_DIR_TAIL}
+num_old=0.1 #days
+hostN=`/bin/hostname -s`
+mkdir -p $dir_ASTER
+out_dir=$dir_ASTER/L1A${TEST_DIR_TAIL}
 mkdir -p $out_dir
 
 ##now="$(date +'%Y%m%d%T')"
 
 # Process the AST_L1A dir indicated with the sceneName
 
-cd $topDir
+cd $dir_ASTER
 
-mkdir -p ${topDir}/logs
-batchLogStem=${topDir}/logs/${batch}_${hostN}
+mkdir -p $dir_ASTER/logs
+batchLogStem=$dir_ASTER/logs/${batch}_${hostN}
 
 cnt_tmpfile=/tmp/$$.tmp
 echo 0 > $cnt_tmpfile
@@ -291,17 +303,16 @@ echo 0 > $cnt_tmpfile
 # Read in sceneList of AST L1A scenes
 while read -r scene; do
 
-    cd $topDir
+    cd $dir_ASTER
 
-	echo "Next scene:"
-    echo $scene
+	echo "Next scene: $scene"
     sceneName=$(basename $scene)
 
     sceneLog=${batchLogStem}_${sceneName}.log
-    echo ; echo "Scene log file" ; echo $sceneLog ; echo
 
+    echo; echo "START: Script call at $(date)" | tee -a $sceneLog
+    echo "${0} ${1} ${2} ${3} ${4} ${5} ${6} ${7} ${8} ${9} ${10} ${11} ${12} ${13} ${14}" | tee -a $sceneLog
     echo "Scene name: ${sceneName}" | tee -a $sceneLog
-    echo "START: $(date)" | tee -a $sceneLog 
 
 	if [ -d "${out_dir}/${sceneName}" ]; then 
 		
@@ -312,8 +323,11 @@ while read -r scene; do
 
         if [ "$REDO_STEREO" = true ] ; then
 
-            # Delete if files older than (indicated with '+') num_old; use '-' to indicate 'younger than'
-            find ${out_dir}/${sceneName}/outASP/out-PC.tif -mtime +${num_old} -exec rm {} \;
+            echo ; echo "Deleting PC file!" ; echo
+            rm -rfv ${out_dir}/${sceneName}/outASP/out-PC.tif
+
+            ### Delete if files older than (indicated with '+') num_old; use '-' to indicate 'younger than'
+            ##find ${out_dir}/${sceneName}/outASP/out-PC.tif -mtime +${num_old} -exec rm {} \;
             
             if [ ! -e "${out_dir}/${sceneName}/outASP/out-PC.tif" ] ; then
                 echo; echo "PC and DEM deleted b/c it was older than ${num_old} days . Re-do stereo" ; echo | tee -a $sceneLog
@@ -327,7 +341,8 @@ while read -r scene; do
 		echo ; echo "Running ASP routines..." | tee -a $sceneLog
         
         # Look above for function arg descriptions
-    	run_asp $MAP $SGM $inDEM $tileSize $sceneName $out_dir $sceneLog $med_filt_sz $text_smth_sz $erode_max_sz $erode_len $res | tee -a $sceneLog
+    	cmd="run_asp $MAP $SGM $inDEM $tileSize $sceneName $out_dir $sceneLog $med_filt_sz $text_smth_sz $erode_max_sz $erode_len $res_dem $LINK"
+        echo ; echo $cmd ; eval $cmd
 	
     else
 		echo "Delete tmp ASP files..."
@@ -340,5 +355,13 @@ while read -r scene; do
 
 done < ${batch}_${hostN}
 
+t_end=$(date +%s)
+t_diff=$(expr "$t_end" - "$t_start")
+t_diff_hr=$(printf "%0.4f" $(echo "$t_diff/3600" | bc -l ))
+
+echo; date
+echo "Total processing time for pair ${pairname} in hrs: ${t_diff_hr}"
 
 
+echo; echo "When all scenes are processed, footprint the cloud-removed DSMs: run_foot_raster.sh ASTER $dir_ASTER/L1A_out/cr/dsm" ; echo
+exit 1
