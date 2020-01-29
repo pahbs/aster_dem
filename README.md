@@ -1,6 +1,9 @@
 # aster_dem
-These shell scripts are used to download ASTER L1A data from EarthData.nasa.gov 
-(using Order IDs), and unzip, preprocess, and the run stereogrammetry routines on the L1A scenes.
+These shell scripts are part of a workflow to derive ASTER L1A DEMs. 
+
+They are used to download ASTER L1A data from EarthData.nasa.gov (using Order IDs), unzip, preprocess, and run stereogrammetry routines on the L1A scenes.
+
+This workflow uses a reference DEM (with full study area coverage) to mapproject input and remove cloud-related elevations errors in output.
 
 The stereo routines are available in the Ames Stereo Pipeline software.
 
