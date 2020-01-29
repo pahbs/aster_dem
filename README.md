@@ -1,5 +1,5 @@
 # aster_dem
-Author: Paul Montesano | paul.m.montesano@nasa.gov
+Author: Paul Montesano
 
 These shell scripts are part of a workflow to derive ASTER L1A DEMs. 
 
