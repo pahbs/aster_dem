@@ -2,7 +2,7 @@
 #
 # Use WGET to download EarthData order zip files to an ADAPT $NOBACKUP/data/ASTER/L1A_orders dir from a list of Order IDs
 #
-# do_aster_wget.sh /att/nobackup/pmontesa/userfs02/data/ASTER_fairbanks_order_list fairbanks
+# do_aster_wget.sh $NOBACKUP/userfs02/data/ASTER_fairbanks_order_list fairbanks
 # next: do_aster_unzip.sh
 #
 # Example of list of order IDs that is stored is an file:
@@ -23,10 +23,11 @@
 # List name of the list of order IDs
 list_name=$1           # full path to a list of Order IDs
 batch_name=${2}
-username_earthdata=${3:-'montesano'}
+# username for earthdata.nasa.gov
+username_earthdata=${3}
 
 # Set up appropriate dirs
-main_dir=${4:-'/att/nobackup/pmontesa/userfs02/data'}
+main_dir=${4:-'${NOBACKUP}/userfs02/data'}
 
 mkdir -p $main_dir/ASTER
 mkdir -p $main_dir/ASTER/L1A_orders

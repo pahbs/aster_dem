@@ -7,7 +7,7 @@
 # [2] Create aster camera model
 # after this
 # Launch like this example:
-# pupsh "hostname ~ 'crane101'" "do_aster_preprocess.sh /att/nobackup/pmontesa/userfs02/data/ASTER/L1A_orders/colima/scenes.zip.list batch_colima /att/nobackup/pmontesa/userfs02/data true"
+# pupsh "hostname ~ 'crane101'" "do_aster_preprocess.sh $NOBACKUP/userfs02/data/ASTER/L1A_orders/colima/scenes.zip.list batch_colima $NOBACKUP/userfs02/data true"
 
 
 ## Check email for "LPDAAC ECS Order Notification Order ID: *****"
@@ -129,7 +129,7 @@ join_by() { local IFS="$1"; shift; echo "$*"; }
 sceneList=$1                            # /path/to/main/zip_list
 batch_name=$2                           # Creates a list 4 stereo (a main batch list of scenenames); can be subdivided and processed on VMs with do_aster_stereo.sh
 
-main_dir=${3:-'/att/nobackup/pmontesa/userfs02/data'}           # main dir uder which 'ASTER' subdir will be placed
+main_dir=${3:-'${NOBACKUP}/userfs02/data'}           # main dir uder which 'ASTER' subdir will be placed
 RM_DIR=${4:-'false'}                    # Remove existing scene dirs and unzip, re-doing all processing for this list of zips? 
 
 mkdir -p $main_dir/ASTER

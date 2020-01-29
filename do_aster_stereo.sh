@@ -4,16 +4,16 @@
 #   (eg; AST_L1A_00306232003135434_20170125151451_24922.zip)
 #
 # Example of most recent call:
-# pupsh "hostname ~ 'ecotone|crane'" "do_aster_stereo.sh list_do_aster_stereo_batch_colima 30 /att/nobackup/pmontesa/userfs02/data /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_N19W104_DEM.tif hardlink true true true true 3 3 49 0"
+# pupsh "hostname ~ 'ecotone|crane'" "do_aster_stereo.sh list_do_aster_stereo_batch_colima 30 $NOBACKUP/userfs02/data $NOBACKUP/userfs02/refdem/TDM1_DEM__30_N19W104_DEM.tif hardlink true true true true 3 3 49 0"
 #
 # Get a refdem from TDX90m
-# cd /att/nobackup/pmontesa/userfs02/data/tandemx
-# gdalbuildvrt /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.vrt $PWD/TDM90/TDM1_DEM__30_N6[3456]W1[45]*/DEM/*DEM.tif
-# gdal_translate /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.vrt /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.tif
+# cd $NOBACKUP/userfs02/data/tandemx
+# gdalbuildvrt $NOBACKUP/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.vrt $PWD/TDM90/TDM1_DEM__30_N6[3456]W1[45]*/DEM/*DEM.tif
+# gdal_translate $NOBACKUP/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.vrt /att/nobackup/pmontesa/userfs02/refdem/TDM1_DEM__30_fairbanks_DEM.tif
 
 # Reference DEMs
-# /att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/refdem/ASTGTM2_N40-79.vrt
-# /att/gpfsfs/briskfs01/ppl/pmontesa/userfs02/data/tandemx/TDM90/mos/TDM1_DEM_90m_DEM.vrt
+# $NOBACKUP/userfs02/refdem/ASTGTM2_N40-79.vrt
+# $NOBACKUP/userfs02/data/tandemx/TDM90/mos/TDM1_DEM_90m_DEM.vrt
 # /att/pubrepo/hma_data/products/nasadem/hma_nasadem_hgt_merge_hgt_aea.tif
 
 ################################

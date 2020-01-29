@@ -9,7 +9,7 @@
 # >userfs02/refdem$ gdalbuildvrt $PWD/TDM1_DEM__30_fairbanks_DEM.tif ../data/tandemx/TDM90/TDM1_DEM__30_N6[3456]W1[45]*/DEM/*DEM.tif
 #
 # Make the list of DEMs like this:
-# pmontesa@himat102:/att/pubrepo/hma_data/ASTER$ find L1A/*/outASP/ -type f -name out-DEM.tif > list_DEM
+# find L1A/*/outASP/ -type f -name out-DEM.tif > list_DEM
 # which produces lines like this:
 # line=L1A/AST_20110604_00306042011060347/outASP/out-DEM.tif
 # the scenName is returned below
@@ -35,7 +35,7 @@ res=$4
 
 # Ref DEM for elev threshold
 refDEM=$5
-#refDEM=/att/nobackup/pmontesa/userfs02/data/srtm_index.vrt
+
 #refDEM=/att/pubrepo/hma_data/products/nasadem/hma_nasadem_hgt_merge_hgt_aea.tif
 # Ref DEM for co-reg
 #refDEMcoreg=/att/pubrepo/hma_data/products/hrsi_dsm/mos/hma_20170716_mos/mos_8m/hma_20170716_mos_8m.vrt
