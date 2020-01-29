@@ -1,5 +1,6 @@
 # aster_dem
 Author: Paul Montesano | paul.m.montesano@nasa.gov
+
 These shell scripts are part of a workflow to derive ASTER L1A DEMs. 
 
 They are used to download ASTER L1A data from EarthData.nasa.gov (using Order IDs), unzip, preprocess, and run stereogrammetry routines on the L1A scenes.
