@@ -29,13 +29,14 @@ run_mapprj() {
 
     inDEM=${1}
     sceneName=${2}
-    threads_per=${3}
+    outdir=${3}
+    threads_per=${4}
 
     cmd_list=''
     echo "Running mapproject ..." 
     for type in N B ; do
         cmd=''
-        cmd+="mapproject --threads=$threads_per $inDEM $sceneName/in-Band3${type}.tif $sceneName/in-Band3${type}.xml $sceneName/in-Band3${type}_proj.tif ; "
+        cmd+="mapproject --threads=$threads_per $inDEM $outdir/$sceneName/in-Band3${type}.tif $outdir/$sceneName/in-Band3${type}.xml $outdir/$sceneName/in-Band3${type}_proj.tif ; "
         echo $cmd
         cmd_list+=\ \'$cmd\'
     done
@@ -65,6 +66,7 @@ run_asp() {
 
     echo; echo "L1A dir: $L1Adir"; echo  
     cd $L1Adir
+    echo "Should match working dir: $PWD" ; echo
 
     sgm_corrKern=7
     ncc_corrKern=21
@@ -113,7 +115,8 @@ run_asp() {
         echo $cmd ; eval $cmd
     fi
 
-    cmd_maprj="run_mapprj $inDEM $sceneName $(($nlogical_cores / 2))"
+    # Set mapproject command here
+    cmd_maprj="run_mapprj $inDEM $sceneName $L1Adir $(($nlogical_cores / 2))"
 
     if [ "$MAP" = true ] ; then
         if [ ! -f ${inPre}N_proj.tif ] || [ ! -f ${inPre}B_proj.tif ] ; then
