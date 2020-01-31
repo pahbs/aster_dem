@@ -87,7 +87,7 @@ preprocess_aster() {
             echo "Removing all but Band3 data"
             rm ${dir_L1A}/${sceneName}/*Band[12456789]*
             rm ${dir_L1A}/${sceneName}/*Supplement*
-            rm ${dir_L1A}/${sceneName}/*.txt
+            #rm ${dir_L1A}/${sceneName}/*.txt
         fi
 
         echo "[2] CREATE CAMERA MODEL ..."
