@@ -1,8 +1,6 @@
 # aster_dem
 Author:
-Paul Montesano, PhD
-Biospheric Sciences Lab
-NASA Goddard Space Flight Center
+Paul Montesano, PhD | Biospheric Sciences Lab | NASA Goddard Space Flight Center
 
 These shell scripts are part of a workflow to derive geo-referenced ASTER L1A digital elevation models (DEMs). 
 
