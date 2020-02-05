@@ -1,11 +1,14 @@
 # aster_dem
-Author: Paul Montesano
+Author:
+Paul Montesano, PhD
+Biospheric Sciences Lab
+NASA Goddard Space Flight Center
 
-These shell scripts are part of a workflow to derive ASTER L1A DEMs. 
+These shell scripts are part of a workflow to derive geo-referenced ASTER L1A digital elevation models (DEMs). 
 
 They are used to download ASTER L1A data from EarthData.nasa.gov (using Order IDs), unzip, preprocess, and run stereogrammetry routines on the L1A scenes.
 
-This workflow uses a reference DEM (with full study area coverage) to mapproject input and remove cloud-related elevations errors in output.
+This workflow uses a reference DEM (with full study area coverage) to mapproject input and remove cloud-related elevations errors in output ASTER L1A DEMs.
 
 These shell scripts are wrappers for the stereogrammetry and gridding routines available in the Ames Stereo Pipeline software.
 https://ti.arc.nasa.gov/tech/asr/groups/intelligent-robotics/ngt/stereo/
