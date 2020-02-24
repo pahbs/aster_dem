@@ -15,7 +15,6 @@ Workflow:
 
 [1] Select and order ASTER L1A scenes from earthdata.nasa.gov
 [2] Wait for email(s)
-
 [3] Get every "order ID" from every email and put each on a line in a list
 
 [4] do_aster_wget.sh $NOBACKUP/userfs02/data/ASTER_<name>_order_list <name>
