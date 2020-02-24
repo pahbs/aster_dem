@@ -14,7 +14,6 @@ https://ti.arc.nasa.gov/tech/asr/groups/intelligent-robotics/ngt/stereo/
 Workflow:
 
 [1] Select and order ASTER L1A scenes from earthdata.nasa.gov
-
 [2] Wait for email(s)
 
 [3] Get every "order ID" from every email and put each on a line in a list
