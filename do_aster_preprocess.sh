@@ -126,11 +126,10 @@ join_by() { local IFS="$1"; shift; echo "$*"; }
 #
 
 # required args
-sceneList=$1                            # /path/to/main/zip_list
-batch_name=$2                           # Creates a list 4 stereo (a main batch list of scenenames); can be subdivided and processed on VMs with do_aster_stereo.sh
-
-main_dir=${3:-'${NOBACKUP}/userfs02/data'}           # main dir uder which 'ASTER' subdir will be placed
-RM_DIR=${4:-'false'}                    # Remove existing scene dirs and unzip, re-doing all processing for this list of zips? 
+sceneList=$1                                # /path/to/main/zip_list
+batch_name=$2                               # Creates a list 4 stereo (a main batch list of scenenames); can be subdivided and processed on VMs with do_aster_stereo.sh
+main_dir=${3:-'${NOBACKUP}/userfs02/data'}  # main dir uder which 'ASTER' subdir will be placed
+RM_DIR=${4:-'false'}                        # Remove existing scene dirs and unzip, re-doing all processing for this list of zips? 
 
 mkdir -p $main_dir/ASTER
 mkdir -p $main_dir/ASTER/logs
