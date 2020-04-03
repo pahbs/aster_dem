@@ -18,8 +18,9 @@ source ~/anaconda3/bin/activate demenv
 
 t_start=$(date +%s)
 
+# A VM-specific list
 # The main scenes list for which sublists have been made with gen_chunks.py
-# Adjacent to DSM dir
+# this list is adjacent to DSM dir
 DSMlist=$1
 
 # Input directory of cloud-removed DSM folder
